@@ -359,156 +359,65 @@ end
 local function script3()
     ﻿-- Assurez-vous que ce script est exécuté dans un LocalScript
 
-
-
-
-
 local player = game.Players.LocalPlayer
 
-
-
-
-
 -- Fonction qui s'exécute chaque fois que le personnage du joueur est ajouté ou respawné
-
 local function setupCharacter(character)
-
     local humanoid = character:WaitForChild("Humanoid")
 
-
-
-
-
     -- Fonction pour vérifier la touche "R"
-
     local function onKeyPress(input, gameProcessed)
-
         if gameProcessed then return end
-
-
-
-
-
         if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.R then
-
             humanoid.Health = 0
-
         end
-
     end
 
-
-
-
-
     -- Connexion de l'événement de pression de touche
-
     game:GetService("UserInputService").InputBegan:Connect(onKeyPress)
-
 end
 
-
-
-
-
--- Assure-toi de bien mettre en place le personnage actuel, ou tout nouveau personnage qui apparait
-
+-- Appliquer à chaque nouveau personnage
 player.CharacterAdded:Connect(setupCharacter)
 
-
-
-
-
--- Si le personnage est déjà présent à l'exécution, on le configure
-
+-- Si un personnage existe déjà, l'appliquer immédiatement
 if player.Character then
-
     setupCharacter(player.Character)
-
-end
+    end
 end
 
 local function script4()
     ﻿local toolName = "Throwing Knife" -- Nom exact de l'outil
-
 local player = game.Players.LocalPlayer
 
-
-
-
-
 -- Fonction qui applique le boost vers la droite de la direction du joueur
-
 local function applyBoost()
+    local character = player.Character
+    if not character then return end
 
-local character = player.Character
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
 
-if not character then return end
+    -- Déterminer la direction vers la DROITE du joueur
+    local rightDirection = humanoidRootPart.CFrame.RightVector
 
-
-
-
-
-local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")  
-
-if not humanoidRootPart then return end  
-
-
-
-
-
--- Déterminer la direction vers la DROITE du joueur  
-
-local lookDirection = humanoidRootPart.CFrame.LookVector  
-
-local rightDirection = humanoidRootPart.CFrame.RightVector -- Direction à droite  
-
-
-
-
-
--- Appliquer une impulsion vers la droite et en hauteur  
-
-local boostDirection = Vector3.new(rightDirection.X * 150, 75, rightDirection.Z * 150) -- Ajuste la force  
-
-humanoidRootPart.Velocity = boostDirection
-
-
-
-
-
+    -- Appliquer une impulsion vers la droite et en hauteur
+    local boostDirection = Vector3.new(rightDirection.X * 150, 75, rightDirection.Z * 150)
+    humanoidRootPart.Velocity = boostDirection
 end
-
-
-
-
 
 -- Détection de l'équipement de l'outil
-
 local function onCharacterAdded(character)
-
-character.ChildAdded:Connect(function(child)
-
-if child:IsA("Tool") and child.Name == toolName then
-
-applyBoost()
-
+    character.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and child.Name == toolName then
+            applyBoost()
+        end
+    end)
 end
-
-end)
-
-end
-
-
-
-
 
 -- Vérifier quand le joueur spawn
-
 if player.Character then
-
-onCharacterAdded(player.Character)
-
+    onCharacterAdded(player.Character)
 end
 
 player.CharacterAdded:Connect(onCharacterAdded)
