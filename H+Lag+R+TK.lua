@@ -396,8 +396,54 @@ local function script4()
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
+local function script5()
+    local Players = game:GetService("Players")
+
+local BAD_IDS = {
+    ["rbxassetid://11257899743"] = true,
+    ["rbxassetid://11257809743"] = true,
+}
+
+-- Fonction pour bloquer une animation spécifique
+local function blockIfBadAnimation(anim)
+    if anim:IsA("Animation") and BAD_IDS[anim.AnimationId] then
+        anim.AnimationId = "rbxassetid://0"
+    end
+end
+
+-- Fonction qui connecte les événements d’un personnage
+local function monitorCharacter(character)
+    -- Check initial de toutes les animations
+    for _, obj in ipairs(character:GetDescendants()) do
+        blockIfBadAnimation(obj)
+    end
+
+    -- Check dynamique si une animation est ajoutée plus tard
+    character.DescendantAdded:Connect(function(descendant)
+        blockIfBadAnimation(descendant)
+    end)
+end
+
+-- Fonction pour gérer chaque joueur
+local function onPlayer(player)
+    if player.Character then
+        monitorCharacter(player.Character)
+    end
+    player.CharacterAdded:Connect(monitorCharacter)
+end
+
+-- Appliquer à tous les joueurs actuels
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayer(player)
+end
+
+-- Pour les nouveaux joueurs
+Players.PlayerAdded:Connect(onPlayer)
+end
+
 -- Lancer tous les scripts
 script1()
 script2()
 script3()
 script4()
+script5()
