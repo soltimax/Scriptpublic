@@ -1,6 +1,5 @@
--- Script principal fusionné pour Delta
+-- Script principal pour Delta (un seul exécutable)
 
---===[ Script 1 - Hitbox + Toggle J/H ]===--
 local function script1()
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -21,7 +20,9 @@ local function script1()
     local function removeHitboxFromCharacter(character)
         if character then
             local existing = character:FindFirstChild("HitboxExtension")
-            if existing then existing:Destroy() end
+            if existing then
+                existing:Destroy()
+            end
             modifiedCharacters[character] = nil
         end
     end
@@ -114,7 +115,6 @@ local function script1()
     end)
 end
 
---===[ Script 2 - Anti-Lag + Optimisation personnages ]===--
 local function script2()
     local Players = game:GetService("Players")
     local Lighting = game:GetService("Lighting")
@@ -126,10 +126,14 @@ local function script2()
 
     task.spawn(function()
         while true do
+            local partsToRemove = {}
             for _, obj in pairs(Workspace:GetChildren()) do
                 if obj:IsA("BasePart") and obj.Name == "Part" then
-                    obj:Destroy()
+                    table.insert(partsToRemove, obj)
                 end
+            end
+            for _, part in pairs(partsToRemove) do
+                pcall(function() part:Destroy() end)
             end
             task.wait(1)
         end
@@ -142,11 +146,13 @@ local function script2()
                 part.CastShadow = false
             end
         end
+
         for _, light in pairs(Workspace:GetDescendants()) do
             if light:IsA("Light") then
                 light.Enabled = false
             end
         end
+
         Lighting.Brightness = 1
         Lighting.Ambient = Color3.fromRGB(80, 80, 80)
         Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 120)
@@ -160,33 +166,72 @@ local function script2()
             if part:IsA("BasePart") then
                 part.Transparency = 0.5
             elseif part:IsA("Accessory") or part:IsA("ParticleEmitter") or part:IsA("Trail") then
-                part:Destroy()
+                task.delay(0.05, function()
+                    if part:IsDescendantOf(game) then
+                        pcall(function() part:Destroy() end)
+                    end
+                end)
             end
         end
+    end
+
+    local function ProcessPlayer(player)
+        if characterAddedConnections[player] then
+            characterAddedConnections[player]:Disconnect()
+        end
+
+        if player.Character then
+            ProcessCharacter(player.Character)
+        end
+
+        local conn = player.CharacterAdded:Connect(function(character)
+            local success = pcall(function()
+                character:WaitForChild("HumanoidRootPart", 5)
+            end)
+            if success then
+                ProcessCharacter(character)
+            end
+        end)
+
+        characterAddedConnections[player] = conn
     end
 
     local function OptimizeCharacter(character)
         local function onDescendantAdded(descendant)
             if descendant:IsA("Accessory") or descendant:IsA("Clothing") or descendant:IsA("ShirtGraphic") or descendant:IsA("Hair") then
-                descendant:Destroy()
+                task.delay(0.05, function()
+                    if descendant:IsDescendantOf(game) then
+                        pcall(function() descendant:Destroy() end)
+                    end
+                end)
             elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                descendant:Destroy()
+                task.delay(0.05, function()
+                    if descendant:IsDescendantOf(game) then
+                        pcall(function() descendant:Destroy() end)
+                    end
+                end)
             end
         end
 
-        local conn = character.DescendantAdded:Connect(function(descendant)
+        local conn
+        conn = character.DescendantAdded:Connect(function(descendant)
             pcall(function()
                 onDescendantAdded(descendant)
             end)
         end)
 
-        wait(1)
+        pcall(function()
+            character:WaitForChild("HumanoidRootPart", 5)
+            character:WaitForChild("Humanoid", 5)
+        end)
+
+        task.wait(1)
 
         for _, item in pairs(character:GetDescendants()) do
             pcall(function() onDescendantAdded(item) end)
         end
 
-        wait(0.5)
+        task.wait(0.5)
 
         for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -197,32 +242,23 @@ local function script2()
         end
 
         task.delay(10, function()
-            if conn then conn:Disconnect() end
-        end)
-    end
-
-    local function ProcessPlayer(player)
-        if characterAddedConnections[player] then characterAddedConnections[player]:Disconnect() end
-
-        if player.Character then
-            ProcessCharacter(player.Character)
-        end
-
-        characterAddedConnections[player] = player.CharacterAdded:Connect(function(character)
-            if pcall(function() character:WaitForChild("HumanoidRootPart", 5) end) then
-                ProcessCharacter(character)
+            if conn then
+                conn:Disconnect()
             end
         end)
     end
 
     local function OptimizePlayer(player)
-        if optimizeConnections[player] then optimizeConnections[player]:Disconnect() end
+        if optimizeConnections[player] then
+            optimizeConnections[player]:Disconnect()
+        end
 
         if player.Character then
             OptimizeCharacter(player.Character)
         end
 
-        optimizeConnections[player] = player.CharacterAdded:Connect(OptimizeCharacter)
+        local conn = player.CharacterAdded:Connect(OptimizeCharacter)
+        optimizeConnections[player] = conn
     end
 
     for _, player in pairs(Players:GetPlayers()) do
@@ -263,15 +299,17 @@ local function script2()
                             if dist > 150 and not char:GetAttribute("Optimized") then
                                 char:SetAttribute("Optimized", true)
                                 for _, obj in ipairs(char:GetDescendants()) do
-                                    if obj:IsA("Sound") or obj:IsA("LocalScript") then
-                                        pcall(function() obj:Destroy() end)
-                                    elseif obj:IsA("BasePart") then
-                                        pcall(function()
-                                            obj.CastShadow = false
-                                            obj.CanCollide = false
-                                            obj.Transparency = 0.8
-                                        end)
-                                    end
+                                    task.spawn(function()
+                                        if obj:IsA("Sound") or obj:IsA("LocalScript") then
+                                            pcall(function() obj:Destroy() end)
+                                        elseif obj:IsA("BasePart") then
+                                            pcall(function()
+                                                obj.CastShadow = false
+                                                obj.CanCollide = false
+                                                obj.Transparency = 0.8
+                                            end)
+                                        end
+                                    end)
                                 end
                             end
                         end
@@ -285,7 +323,9 @@ local function script2()
     Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Explosion") then
             task.defer(function()
-                pcall(function() child:Destroy() end)
+                pcall(function()
+                    child:Destroy()
+                end)
             end)
         end
     end)
@@ -302,26 +342,29 @@ local function script2()
     end)
 end
 
---===[ Script 3 - Touche R pour se kill ]===--
 local function script3()
     local player = game.Players.LocalPlayer
+
     local function setupCharacter(character)
         local humanoid = character:WaitForChild("Humanoid")
+
         local function onKeyPress(input, gameProcessed)
             if gameProcessed then return end
             if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.R then
                 humanoid.Health = 0
             end
         end
+
         game:GetService("UserInputService").InputBegan:Connect(onKeyPress)
     end
+
     player.CharacterAdded:Connect(setupCharacter)
+
     if player.Character then
         setupCharacter(player.Character)
     end
 end
 
---===[ Script 4 - Boost directionnel avec outil ]===--
 local function script4()
     local toolName = "Throwing Knife"
     local player = game.Players.LocalPlayer
@@ -349,10 +392,11 @@ local function script4()
     if player.Character then
         onCharacterAdded(player.Character)
     end
+
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
---===[ Lancer tous les scripts ]===--
+-- Lancer tous les scripts
 script1()
 script2()
 script3()
