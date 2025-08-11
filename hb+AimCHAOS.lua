@@ -5,7 +5,7 @@ local function script1()
     local RunService = game:GetService("RunService")
     local UserInputService = game:GetService("UserInputService")
 
-    local hitboxSize = Vector3.new(3, 3, 3)
+    local hitboxSize = Vector3.new(4, 4, 4)
     local hitboxOffset = Vector3.new(0, 0, 0)
     local modifiedCharacters = {}
     local hitboxEnabled = true
@@ -627,3 +627,7 @@ end
 
 end)
 end
+
+-- Lancer tous les scripts
+script1()
+script2()
