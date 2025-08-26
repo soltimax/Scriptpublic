@@ -2,23 +2,36 @@
 
 local function script1()
 	local Players = game:GetService("Players")
-	local Workspace = game:GetService("Workspace")
 	local Lighting = game:GetService("Lighting")
+	local Workspace = game:GetService("Workspace")
 	local LocalPlayer = Players.LocalPlayer
 
--- 🔁 Suppression ciblée des "Part" inutiles dans le workspace
-for _, obj in pairs(Workspace:GetChildren()) do
-    if obj:IsA("BasePart") and obj.Name == "Part" then
-        obj.Transparency = 1
-        obj.CanCollide = false
-    end
-end
+	local characterAddedConnections = {}
+	local optimizeConnections = {}
 
--- 💡 Allègement général de la carte
+-- 🔁 Suppression ciblée des "Part" inutiles dans le workspace
+task.spawn(function()
+    while true do
+        local partsToRemove = {}
+        for _, obj in pairs(Workspace:GetChildren()) do
+            if obj:IsA("BasePart") and obj.Name == "Part" then
+                table.insert(partsToRemove, obj)
+            end
+        end
+        for _, part in pairs(partsToRemove) do
+            part:Destroy()
+        end
+        task.wait(1)
+    end
+end)
+
+-- 💡 Allègement de la carte (optimisé GPU/CPU)
 local function ProcessMap()
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Material = Enum.Material.SmoothPlastic
+            -- Matériau le plus léger
+            part.Material = Enum.Material.Plastic
+            -- Supprime les ombres
             part.CastShadow = false
         end
     end
@@ -29,28 +42,25 @@ local function ProcessMap()
         end
     end
 
-    Lighting.Brightness = 1
-    Lighting.Ambient = Color3.fromRGB(80, 80, 80)
-    Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 120)
-    Lighting.Technology = Enum.Technology.Compatibility
-    Lighting.GlobalShadows = true
+    -- Réglages Lighting ultra light
+    Lighting.Brightness = 0.5
+    Lighting.Ambient = Color3.fromRGB(50, 50, 50)
+    Lighting.OutdoorAmbient = Color3.fromRGB(80, 80, 80)
+    Lighting.EnvironmentDiffuseScale = 0.2
+    Lighting.EnvironmentSpecularScale = 0
+    Lighting.Technology = Enum.Technology.Legacy
+    Lighting.GlobalShadows = false
 end
 ProcessMap()
 
--- 💥 Suppression visuelle des explosions
-for _, obj in pairs(Workspace:GetChildren()) do
-    if obj:IsA("Explosion") then
-        obj.BlastPressure = 0
-        obj.BlastRadius = 0
-        obj.Visible = false
-    end
-end
-
+-- 💥 Suppression instantanée des explosions (C4 / grenades)
 Workspace.ChildAdded:Connect(function(child)
     if child:IsA("Explosion") then
-        child.BlastPressure = 0
-        child.BlastRadius = 0
-        child.Visible = false
+        task.defer(function()
+            pcall(function()
+                child:Destroy()
+            end)
+        end)
     end
 end)
 
@@ -72,35 +82,15 @@ for _, obj in pairs(Workspace:GetDescendants()) do
     end
 end
 
--- 👤 Optimisation LOD des joueurs éloignés (>150 studs)
+-- 🔄 Boucle continue de sécurité pour supprimer toute explosion restante
 task.spawn(function()
     while true do
-        local myChar = LocalPlayer.Character
-        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        if myHRP then
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        local dist = (hrp.Position - myHRP.Position).Magnitude
-                        if dist > 150 then
-                            for _, obj in pairs(player.Character:GetDescendants()) do
-                                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                                    obj.Enabled = false
-                                elseif obj:IsA("Sound") then
-                                    obj.Volume = 0
-                                elseif obj:IsA("BasePart") then
-                                    pcall(function()
-                                        obj.CastShadow = false
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                end
+        for _, obj in pairs(Workspace:GetChildren()) do
+            if obj:IsA("Explosion") then
+                pcall(function() obj:Destroy() end)
             end
         end
-        task.wait(2) -- mise à jour toutes les 2 secondes
+        task.wait(0.2)
     end
 end)
 end
