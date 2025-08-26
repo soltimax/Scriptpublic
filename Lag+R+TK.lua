@@ -129,34 +129,56 @@ local function script2()
 end
 
 local function script3()
-    local toolName = "Throwing Knife"
-    local player = game.Players.LocalPlayer
+    local toolName = "Throwing Knife" -- Nom exact de l'outil
+	local player = game.Players.LocalPlayer
+	local boostEnabled = false -- Par défaut, le boost est désactivé
 
-    local function applyBoost()
-        local character = player.Character
-        if not character then return end
+-- Fonction qui applique le boost vers la droite du joueur
+local function applyBoost()
+    if not boostEnabled then return end -- Si boost désactivé, ne rien faire
 
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoidRootPart then return end
+    local character = player.Character
+    if not character then return end
 
-        local rightDirection = humanoidRootPart.CFrame.RightVector
-        local boostDirection = Vector3.new(rightDirection.X * 150, 75, rightDirection.Z * 150)
-        humanoidRootPart.Velocity = boostDirection
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+
+    -- Déterminer la direction vers la droite du joueur
+    local rightDirection = humanoidRootPart.CFrame.RightVector
+
+    -- Appliquer une impulsion vers la droite et en hauteur
+    local boostDirection = Vector3.new(rightDirection.X * 150, 75, rightDirection.Z * 150)
+    humanoidRootPart.Velocity = boostDirection
+end
+
+-- Détection de l'équipement de l'outil
+local function onCharacterAdded(character)
+    character.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and child.Name == toolName then
+            applyBoost()
+        end
+    end)
+end
+
+-- Vérifier quand le joueur spawn
+if player.Character then
+    onCharacterAdded(player.Character)
+end
+player.CharacterAdded:Connect(onCharacterAdded)
+
+-- Détection des touches pour activer/désactiver le boost
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end -- Ignorer si l'input est déjà traité
+
+    if input.KeyCode == Enum.KeyCode.K then
+        boostEnabled = true
+        print("Boost activé")
+    elseif input.KeyCode == Enum.KeyCode.L then
+        boostEnabled = false
+        print("Boost désactivé")
     end
-
-    local function onCharacterAdded(character)
-        character.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") and child.Name == toolName then
-                applyBoost()
-            end
-        end)
-    end
-
-    if player.Character then
-        onCharacterAdded(player.Character)
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
+end)
 end
 
 -- Lancer tous les scripts
