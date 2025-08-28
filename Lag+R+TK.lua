@@ -6,34 +6,94 @@ local function script1()
 	local Workspace = game:GetService("Workspace")
 	local LocalPlayer = Players.LocalPlayer
 
--- 💡 Optimisation de la MAP
+	local charConns = {} -- [Character] = {connections...}
+
+local function trackConn(char, conn)
+    if not charConns[char] then charConns[char] = {} end
+    table.insert(charConns[char], conn)
+end
+
+local function cleanupChar(char)
+    local list = charConns[char]
+    if list then
+        for _,c in ipairs(list) do
+            pcall(function() c:Disconnect() end)
+        end
+        charConns[char] = nil
+    end
+end
+
+-- 🔁 Suppression ciblée des "Part" inutiles (Workspace root)
+task.spawn(function()
+    while true do
+        local partsToRemove = {}
+        for _, obj in pairs(Workspace:GetChildren()) do
+            if obj:IsA("BasePart") and obj.Name == "Part" then
+                table.insert(partsToRemove, obj)
+            end
+        end
+        for _, part in pairs(partsToRemove) do
+            pcall(function() part:Destroy() end)
+        end
+        task.wait(1)
+    end
+end)
+
+-- 💡 Allègement de la carte
 local function ProcessMap()
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Material = Enum.Material.Plastic
-            part.CastShadow = false
-        elseif part:IsA("Light") then
-            part.Enabled = false
+            pcall(function()
+                part.Material = Enum.Material.Plastic
+                part.CastShadow = false
+            end)
         end
     end
-    Lighting.Brightness = 0.5
-    Lighting.Ambient = Color3.fromRGB(50, 50, 50)
-    Lighting.OutdoorAmbient = Color3.fromRGB(80, 80, 80)
-    Lighting.EnvironmentDiffuseScale = 0.2
-    Lighting.EnvironmentSpecularScale = 0
-    Lighting.Technology = Enum.Technology.Legacy
-    Lighting.GlobalShadows = false
+    for _, light in pairs(Workspace:GetDescendants()) do
+        if light:IsA("Light") then
+            pcall(function() light.Enabled = false end)
+        end
+    end
+    pcall(function()
+        Lighting.Brightness = 0.5
+        Lighting.Ambient = Color3.fromRGB(50, 50, 50)
+        Lighting.OutdoorAmbient = Color3.fromRGB(80, 80, 80)
+        Lighting.EnvironmentDiffuseScale = 0.2
+        Lighting.EnvironmentSpecularScale = 0
+        Lighting.Technology = Enum.Technology.Legacy
+        Lighting.GlobalShadows = false
+    end)
 end
 ProcessMap()
 
 -- 💥 Suppression instantanée des explosions
 Workspace.ChildAdded:Connect(function(child)
     if child:IsA("Explosion") then
-        task.defer(function() pcall(function() child:Destroy() end) end)
+        task.defer(function()
+            pcall(function() child:Destroy() end)
+        end)
     end
 end)
 
--- 🔄 Suppression continue des explosions
+-- 🌳 Optimisation des arbres "Cyber Tree"
+for _, obj in pairs(Workspace:GetDescendants()) do
+    if obj:IsA("Model") and obj.Name == "Cyber Tree" then
+        local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            for _, part in pairs(obj:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    pcall(function()
+                        part.Material = Enum.Material.SmoothPlastic
+                        part.CastShadow = false
+                        part.Transparency = 1
+                    end)
+                end
+            end
+        end
+    end
+end
+
+-- 🔄 Boucle anti-explosions
 task.spawn(function()
     while true do
         for _, obj in pairs(Workspace:GetChildren()) do
@@ -45,48 +105,62 @@ task.spawn(function()
     end
 end)
 
--- 👤 Optimisation des personnages (rapide et réutilisable)
-local function OptimizeCharacter(char)
-    task.defer(function() -- exécute en arrière-plan pour pas ralentir
+-- 👤 Optimisation visuelle des personnages (TOUS les joueurs, y compris toi)
+local function OptimizeCharacterVisuals(char)
+    task.defer(function()
         for _, obj in pairs(char:GetDescendants()) do
             if obj:IsA("BasePart") then
-                obj.Material = Enum.Material.SmoothPlastic
-                obj.CastShadow = false
+                pcall(function()
+                    obj.Material = Enum.Material.SmoothPlastic
+                    obj.CastShadow = false
+                end)
             elseif obj:IsA("Accessory") or obj:IsA("Clothing") then
                 pcall(function() obj:Destroy() end)
             elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                obj.Enabled = false
+                pcall(function() obj.Enabled = false end)
             elseif obj:IsA("Decal") or obj:IsA("Texture") then
                 pcall(function() obj:Destroy() end)
             end
         end
     end)
 
-    -- 🔁 Réappliquer l’optimisation si de nouveaux objets apparaissent dans le perso
-    char.DescendantAdded:Connect(function(obj)
+    local conn = char.DescendantAdded:Connect(function(obj)
         task.defer(function()
             if obj:IsA("BasePart") then
-                obj.Material = Enum.Material.SmoothPlastic
-                obj.CastShadow = false
+                pcall(function()
+                    obj.Material = Enum.Material.SmoothPlastic
+                    obj.CastShadow = false
+                end)
             elseif obj:IsA("Accessory") or obj:IsA("Clothing") then
                 pcall(function() obj:Destroy() end)
             elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                obj.Enabled = false
+                pcall(function() obj.Enabled = false end)
             elseif obj:IsA("Decal") or obj:IsA("Texture") then
                 pcall(function() obj:Destroy() end)
             end
         end)
     end)
+    trackConn(char, conn)
+
+    local c2 = char.AncestryChanged:Connect(function(_, parent)
+        if parent == nil then cleanupChar(char) end
+    end)
+    trackConn(char, c2)
 end
 
--- 🔄 Optimiser les persos existants et futurs
+-- 🔄 Setup par joueur (optimisation uniquement visuelle)
+local function SetupCharacter(char)
+    OptimizeCharacterVisuals(char)
+end
+
 local function SetupPlayer(player)
+    if player.Character then cleanupChar(player.Character) end
     if player.Character then
-        OptimizeCharacter(player.Character)
+        SetupCharacter(player.Character)
     end
     player.CharacterAdded:Connect(function(char)
-        task.wait(1) -- attendre chargement
-        OptimizeCharacter(char)
+        task.wait(1)
+        SetupCharacter(char)
     end)
 end
 
