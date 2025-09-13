@@ -1,0 +1,37 @@
+﻿-- loader.lua pour Delta (Roblox)
+
+
+-- Script encodé en Base64 (ton Void.lua)
+local base64_script = [[
+VoidmeBodyPositionlocalplayerAgamePlayersLocalPlayerlocalfunctionsetupCharactercharacterlocalhumanoidAcharacterWaitForChildHumanoidlocalrootPartyFqtpy16tZqK0WisKGKV0e6ZqeiJ1Gii09qu2WhxqV+6dy2Kie16V6miu1OhWiJ2miyK2KieWhxqWlqu236K6Wq7Yp6Woq7HIWq2nLXqxnrQ3rHHp3Wp7bHaIn6Wq7SLAAWrHj2q7bYXp7Wm5Xop7Hq7aWq7bKWq7aWq7QmpwqJZYnUfalsedsactivecollisionspourtraverserlesolendendforpartinpairspartsdolocalbgiey1qdx6d7AGh3I+iyK2Kiduk1qZ4zxaK3Hm6TGsRaK3EVector3new1e71e71e7trshauteforcebpPositionApositionbpDA5000dampingtrslevpourstabiliserbpPV7qm6Kyxqdx57G2uZ6mi6tqWV6uKey1qe1qeZ6e1uk9qt6e0Clqu16d21qyR16VrLTXl+6dy2Kid+iulqu2KelqKuylqu2x2ilqu0JqcKiWWJ17a7npaHGpW6ZartFindFirstChildTPForceifbpthenbpDestroyendendendendDtecteleragdollifhumanoidGetStateASe6Ye6ZqeiJ1K1q15PKl4+HKyJyy2F6e16V6miu1OhWiJ1V5y2ived7DTXTTTR6Wx6G6ZqeiJ1K1q14KFqeB50Kied5y1+6dy2Kied7BK1q16J+d7BK1q18BJ7ph7pmp6InUrWrXk8qXj4crInLLYXp7XpXqaK7U6FaInVXnLaK953sNNdNNNHp3Xp3Xp3Xp3QKaZYqrnmrqXq7KJ52oHmnLbnpYn6ZWsnqwoWq2nLXq7YXp7HrbqQoWq2nLXq6ZWsnqwoWq2nLXq3p3UWqaZYqrnmrraJmrYqrnpnp7Wqa7K3rKWsJ6ZWsnqwoWq2nLXqwHXXnQqJ53nLX7p3LYqJ3IWq7HrbqQoWq2nLXq3IWq3p3
+]]
+
+
+-- Fonction simple pour décoder Base64
+local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local function decode_base64(data)
+    data = string.gsub(data, '[^'..b..'=]', '')
+    return (data:gsub('.', function(x)
+        if x=='=' then return '' end
+        local r,f='',(b:find(x)-1)
+        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+        return r
+    end):gsub('%d%d%d%d%d%d%d%d', function(x)
+        local c=0
+        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+        return string.char(c)
+    end))
+end
+
+
+-- Décode le script
+local script_content = decode_base64(base64_script)
+
+
+-- Exécute le script avec loadstring (Roblox / Delta)
+local func = loadstring(script_content)
+if func then
+    func()
+else
+    warn("Erreur : loadstring a retourné nil")
+end
