@@ -1,3 +1,213 @@
+local function script1()
+-- Loop KawaiiRevolver (sans equipement)
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+-- Obtenez les services nécessaires
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Liste des noms de joueurs à cibler (DisplayName)
+local targetPlayerNames = {}
+
+-- Liste des usernames à ignorer (jamais attaqués)
+local ignoredUsernames = {
+    solterrman = true,
+    solterreman2 = true,
+    angel = true
+}
+
+-- Nom de l'outil à utiliser
+local ToolName = "Kawaii Revolver"
+
+-- Crée l'interface utilisateur
+local ScreenGui = Instance.new("ScreenGui")
+local TextBox = Instance.new("TextBox")
+local AddButton = Instance.new("TextButton")
+local RemoveButton = Instance.new("TextButton")
+local SuggestionsFrame = Instance.new("Frame")
+
+-- Configure ScreenGui
+ScreenGui.Parent = game.CoreGui
+
+-- Configure TextBox pour entrer le nom du joueur
+TextBox.Parent = ScreenGui
+TextBox.Size = UDim2.new(0, 200, 0, 30)
+TextBox.Position = UDim2.new(1, -220, 0, 10) -- En haut à droite
+TextBox.PlaceholderText = "Entrer le nom du joueur"
+TextBox.Text = ""
+TextBox.TextSize = 14
+
+-- Configure le bouton "Fixe"
+AddButton.Parent = ScreenGui
+AddButton.Size = UDim2.new(0, 100, 0, 30)
+AddButton.Position = UDim2.new(1, -120, 0, 50)
+AddButton.Text = "Fixe"
+AddButton.TextSize = 14
+
+-- Configure le bouton "Unfixe"
+RemoveButton.Parent = ScreenGui
+RemoveButton.Size = UDim2.new(0, 100, 0, 30)
+RemoveButton.Position = UDim2.new(1, -230, 0, 50)
+RemoveButton.Text = "Unfixe"
+RemoveButton.TextSize = 14
+
+-- Configure le cadre des suggestions
+SuggestionsFrame.Parent = ScreenGui
+SuggestionsFrame.Size = UDim2.new(0, 200, 0, 100)
+SuggestionsFrame.Position = UDim2.new(1, -220, 0, 90)
+SuggestionsFrame.BackgroundTransparency = 0.5
+SuggestionsFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+SuggestionsFrame.Visible = false
+
+-- Fonction pour obtenir le joueur cible par son nom d'affichage
+local function GetPlayerByName(displayName)
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.DisplayName == displayName then
+            return player
+        end
+    end
+    return nil
+end
+
+-- Action du bouton "Fixe" pour ajouter un joueur à la liste
+AddButton.MouseButton1Click:Connect(function()
+    local enteredName = TextBox.Text
+    if enteredName ~= "" and not table.find(targetPlayerNames, enteredName) then
+        local player = GetPlayerByName(enteredName)
+        if player and not ignoredUsernames[player.Name] then
+            table.insert(targetPlayerNames, enteredName)
+        end
+        TextBox.Text = ""
+    end
+end)
+
+-- Action du bouton "Unfixe" pour retirer un joueur de la liste
+RemoveButton.MouseButton1Click:Connect(function()
+    local enteredName = TextBox.Text
+    if enteredName ~= "" then
+        for i, name in ipairs(targetPlayerNames) do
+            if name == enteredName then
+                table.remove(targetPlayerNames, i)
+                break
+            end
+        end
+        TextBox.Text = ""
+    end
+end)
+
+-- Fonction pour appliquer les dégâts avec l'outil "Kawaii Revolver"
+local function applyDamageToPlayer(targetPlayer)
+    local Humanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+    if Humanoid then
+        local Tool = LocalPlayer.Backpack:FindFirstChild(ToolName)
+        if Tool then
+            Tool.Parent = LocalPlayer.Character
+
+            -- Rendre le tool invisible
+            for _, desc in ipairs(Tool:GetDescendants()) do
+                if desc:IsA("BasePart") then
+                    desc.Transparency = 1
+                    desc.CanCollide = false
+                elseif desc:IsA("Decal") then
+                    desc.Transparency = 1
+                end
+            end
+        end
+
+        Tool = LocalPlayer.Character:FindFirstChild(ToolName)
+        if Tool then
+            local DamageRemote = Tool:FindFirstChild("DamageRemote")
+            if DamageRemote then
+                DamageRemote:FireServer(Humanoid)
+            end
+            -- Remet l'outil dans le backpack immédiatement après
+            Tool.Parent = LocalPlayer.Backpack
+        end
+    end
+end
+
+-- Fonction pour gérer la boucle d'attaque
+local function attackLoop()
+    while true do
+        for _, targetName in ipairs(targetPlayerNames) do
+            local targetPlayer = GetPlayerByName(targetName)
+
+            -- Vérifications complètes + protection des usernames ignorés
+            if targetPlayer
+            and not ignoredUsernames[targetPlayer.Name]
+            and targetPlayer.Character
+            and targetPlayer.Character:FindFirstChild("Humanoid") then
+
+                local humanoid = targetPlayer.Character.Humanoid
+
+                while humanoid.Health > 0 do
+                    applyDamageToPlayer(targetPlayer)
+                    task.wait(1)
+
+                    -- Re-vérification continue
+                    if not targetPlayer
+                    or ignoredUsernames[targetPlayer.Name]
+                    or not targetPlayer.Character
+                    or not targetPlayer.Character:FindFirstChild("Humanoid") then
+                        break
+                    end
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+end
+
+-- Fonction pour mettre à jour les suggestions
+local function updateSuggestions(inputText)
+    for _, child in ipairs(SuggestionsFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    if inputText == "" then
+        SuggestionsFrame.Visible = false
+        return
+    end
+
+    SuggestionsFrame.Visible = true
+    local yOffset = 0
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.DisplayName:lower():find(inputText:lower()) then
+            local SuggestionButton = Instance.new("TextButton")
+            SuggestionButton.Size = UDim2.new(1, 0, 0, 20)
+            SuggestionButton.Position = UDim2.new(0, 0, 0, yOffset)
+            SuggestionButton.Text = player.DisplayName
+            SuggestionButton.TextScaled = true
+            SuggestionButton.TextColor3 = Color3.new(1, 1, 1)
+            SuggestionButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+            SuggestionButton.BorderSizePixel = 0
+            SuggestionButton.Parent = SuggestionsFrame
+
+            SuggestionButton.MouseButton1Click:Connect(function()
+                TextBox.Text = player.DisplayName
+                updateSuggestions("")
+            end)
+
+            yOffset = yOffset + 25
+        end
+    end
+end
+
+-- Détecter les changements dans le TextBox
+TextBox:GetPropertyChangedSignal("Text"):Connect(function()
+    updateSuggestions(TextBox.Text)
+end)
+
+-- Lancer la boucle d'attaque en arrière-plan
+task.spawn(attackLoop)
+end
+
+local function script2()
 -- Void me (BodyPosition) - maintien continu
 
 local player = game.Players.LocalPlayer
@@ -119,3 +329,7 @@ end
 player.CharacterAdded:Connect(function(char)
     setupCharacter(char)
 end)
+end
+
+script1()
+script2()
