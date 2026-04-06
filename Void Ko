@@ -1,0 +1,49 @@
+-- Void me (Instant après 2 secondes)
+
+local player = game.Players.LocalPlayer
+
+local function setupCharacter(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local triggered = false -- une seule activation par ragdoll
+
+    local function teleportToVoid()
+        if triggered then return end
+        triggered = true
+
+        -- attend 2 secondes pour que le ragdoll se stabilise
+        task.delay(2, function()
+            -- désactive collisions
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+
+            -- téléporte instantanément dans le void
+            rootPart.CFrame = CFrame.new(0, -1000, 0)
+        end)
+    end
+
+    -- Détecte le ragdoll
+    local function checkRagdoll()
+        if humanoid:GetState() == Enum.HumanoidStateType.Physics then
+            teleportToVoid()
+        end
+    end
+
+    checkRagdoll() -- si déjà en ragdoll
+    humanoid.StateChanged:Connect(function(_, newState)
+        if newState == Enum.HumanoidStateType.Physics then
+            teleportToVoid()
+        end
+    end)
+end
+
+-- Applique au personnage actuel
+if player.Character then
+    setupCharacter(player.Character)
+end
+
+-- Réapplique automatiquement après respawn
+player.CharacterAdded:Connect(setupCharacter)
